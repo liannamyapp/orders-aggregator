@@ -29,7 +29,27 @@ export function tzOffsetMinutes(timeZone: string, at: Date): number {
   return Math.round((asUtc - Math.floor(at.getTime() / 1000) * 1000) / 60_000);
 }
 
-/** Календарная дата (YYYY-MM-DD) момента `at` при смещении `offsetMinutes`. */
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * Календарная дата (YYYY-MM-DD) момента `at` в таймзоне `timeZone`.
+ * Смещение берётся на сам момент `at`, поэтому переходы на летнее/зимнее время учитываются.
+ */
+export function localDate(at: Date, timeZone: string): string {
+  let fmt = dateFormatters.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    dateFormatters.set(timeZone, fmt);
+  }
+  const parts = fmt.formatToParts(at);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value;
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+/**
+ * Календарная дата (YYYY-MM-DD) момента `at` при фиксированном смещении `offsetMinutes`.
+ * Для дат в таймзоне клиента используйте localDate: смещение у таймзоны не постоянно (DST).
+ */
 export function dateAtOffset(at: Date, offsetMinutes: number): string {
   return new Date(at.getTime() + offsetMinutes * 60_000).toISOString().slice(0, 10);
 }
